@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Iinclude -std=gnu99
-SERVER_OBJS = obj/server.o
-CLIENT_OBJS = obj/client.o
+SERVER_OBJS = obj/server.o obj/myutil.o
+CLIENT_OBJS = obj/client.o obj/myutil.o
 
 all: server client
 
