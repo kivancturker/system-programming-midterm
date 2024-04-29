@@ -2,26 +2,15 @@
 #define MYUTIL_H
 
 #include <stdlib.h>
+#include <errno.h>
+#include "mytypes.h"
 
-#define MAX_FILENAME_SIZE 256
-
-struct ServerArg{
-    char filename[MAX_FILENAME_SIZE];
-    int numOfClients;
-};
-
-struct ClientArg {
-    char connectionType[MAX_FILENAME_SIZE];
-    pid_t serverPid;
-};
-
-enum ConnectionType {
-    CONNECT,
-    TRYCONNECT
-};
+#define NO_EINTR(expr) while ((expr) == -1 && errno == EINTR);
 
 void parseServerArgs(int argc, char *argv[], struct ServerArg *serverArg);
 void parseClientArgs(int argc, char *argv[], struct ClientArg *clientArg);
-enum ConnectionType getConnectionType(const char *connectionType);
+enum CommandType getConnectionType(const char *connectionType);
+void createDirIfNotExist(const char *dirName);
+void errExit(const char* errMessage);
 
 #endif // MYUTIL_H
