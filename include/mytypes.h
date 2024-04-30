@@ -12,6 +12,7 @@ enum CommandType {
     TRYCONNECT,
     LIST,
     HELP,
+    QUIT,
     UNKNOWN
 };
 
@@ -44,11 +45,13 @@ struct ClientArg {
 
 struct ConnectionRequest {
     pid_t clientPid;
+    int clientNum;
     char responseFifoName[MAX_FILENAME_SIZE];
 };
 
 struct ConnectionInfo {
     pid_t clientPid;
+    pid_t childPid;
     int childNum;
     int pipeFds[2];
 };

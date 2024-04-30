@@ -3,16 +3,30 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 
 #include "myutil.h"
 #include "ipc.h"
 #include "command_handler.h"
 #include "mytypes.h"
 
+sig_atomic_t sigIntrCount = 0;
+
+void sigintHandler(int signal) {
+    sigIntrCount++;
+}
+
 int main(int argc, char *argv[]) {
     struct ClientArg clientArg;
     parseClientArgs(argc, argv, &clientArg);
     enum CommandType connectionType = getConnectionType(clientArg.connectionType); // Later put this on the request
+    
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = &sigintHandler;
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        errExit("sigaction");
+    }
 
     char responseFifoName[MAX_FILENAME_SIZE];
     createUniqueResponseFifoName(responseFifoName, getpid());
@@ -52,6 +66,13 @@ int main(int argc, char *argv[]) {
     while(1) {
         printf("\nEnter command: ");
         fgets(command, 255, stdin);
+        if (sigIntrCount > 0) {
+            printf("Exiting...\n");
+            request.clientPid = getpid();
+            request.commandType = QUIT;
+            writeRequestToFifo(requestFifoFd, request);
+            break;
+        }
         command[strlen(command) - 1] = '\0'; // Remove newline
         commandType = getCommandTypeFromCommandString(command);
         if (commandType == UNKNOWN) {

@@ -13,16 +13,19 @@ void childMain(struct ConnectionRequest connectionRequest, int pipeFd) {
 
     int responseFifoFd = open(responseFifoName, O_WRONLY, 0666);
     if (responseFifoFd == -1) {
-        errExit("open response fifo");
+        errExit("open response fifo child");
     }
     struct Response response;
     response.status = OK;
     writeResponseToFifo(responseFifoFd, response);
-    printf("Client PID %d connected\n", clientPid);
+    printf("Client PID %d connected as \"client%d\"\n", clientPid, connectionRequest.clientNum);
 
     while(1) {
         struct Request request;
         readForwardedRequestFromServer(pipeFd, &request);
+        if (request.commandType == QUIT) {
+            break;
+        }
         handleCommand(request, responseFifoFd);
     }
 

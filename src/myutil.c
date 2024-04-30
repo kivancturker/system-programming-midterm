@@ -125,6 +125,16 @@ int findConnectionIndexByClientPid(struct ConnectionInfo connectionInfos[], int 
     return -1;
 }
 
+int findConnectionIndexByChildPid(struct ConnectionInfo connectionInfos[], int numOfClients, pid_t childPid) {
+    for (int i = 0; i < numOfClients; i++) {
+        if (connectionInfos[i].childPid == childPid) {
+            return i;
+        }
+    }
+    return -1;
+
+}
+
 enum CommandType getCommandTypeFromCommandString(const char* command) {
     if (strcmp(command, "Connect") == 0) {
         return CONNECT;

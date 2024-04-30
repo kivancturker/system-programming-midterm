@@ -20,6 +20,7 @@ void removeConnection(struct ConnectionInfo connectionInfos[], int numOfClients,
 void addNewConnection(struct ConnectionInfo connectionInfos[], int numOfClients, int childNum, pid_t clientPid);
 int findAvailableConnection(struct ConnectionInfo connectionInfos[], int numOfClients);
 int findConnectionIndexByClientPid(struct ConnectionInfo connectionInfos[], int numOfClients, pid_t clientPid);
+int findConnectionIndexByChildPid(struct ConnectionInfo connectionInfos[], int numOfClients, pid_t childPid);
 enum CommandType getCommandTypeFromCommandString(const char* command);
 
 #endif // MYUTIL_H
