@@ -32,13 +32,11 @@ int main(int argc, char *argv[]) {
     // Send the connection request    
     writeRequestToFifo(requestFifoFd, request);
 
-
     createFifoIfNotExist(responseFifoName);
     int responseFifoFd = open(responseFifoName, O_RDONLY, 0666);
     if (responseFifoFd == -1) {
         errExit("open response fifo");
     }
-
     // Wait for server to send connection acceptance response
     printf("Waiting for Que...\n");
     struct Response response;
@@ -48,6 +46,25 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     printf("Connection Established\n");
+
+    enum CommandType commandType;
+    char command[255];
+    while(1) {
+        printf("\nEnter command: ");
+        fgets(command, 255, stdin);
+        command[strlen(command) - 1] = '\0'; // Remove newline
+        commandType = getCommandTypeFromCommandString(command);
+        if (commandType == UNKNOWN) {
+            printf("Unknown command\n");
+            continue;
+        }
+        request.clientPid = getpid();
+        request.commandType = commandType;
+
+        writeRequestToFifo(requestFifoFd, request);
+        readResponseFromFifo(responseFifoFd, &response);
+        handleCommandResponseByCommandType(commandType, response);
+    }
 
     return 0;
 }

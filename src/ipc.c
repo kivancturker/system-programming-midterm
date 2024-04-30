@@ -117,3 +117,19 @@ int getRequestSize() {
 int getResponseSize() {
     return MAX_PAYLOAD_SIZE + sizeof(enum Status);
 }
+
+void forwardRequestToChild(int childPipeWriteEndFd, struct Request request) {
+    int bytesWritten = -1;
+    NO_EINTR(bytesWritten = write(childPipeWriteEndFd, &request, sizeof(struct Request)));
+    if (bytesWritten == -1) {
+        errExit("write");
+    }
+}
+
+void readForwardedRequestFromServer(int childPipeReadEndFd, struct Request* request) {
+    int bytesRead = -1;
+    NO_EINTR(bytesRead = read(childPipeReadEndFd, request, sizeof(struct Request)));
+    if (bytesRead == -1) {
+        errExit("read");
+    }
+}

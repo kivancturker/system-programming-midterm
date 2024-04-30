@@ -1,6 +1,11 @@
 {
     "files.associations": {
         "util.h": "c",
-        "ipc.h": "c"
+        "ipc.h": "c",
+        "command_handler.h": "c",
+        "linkedlist.h": "c",
+        "myutil.h": "c",
+        "child.h": "c",
+        "mytypes.h": "c"
     }
 }

@@ -16,5 +16,7 @@ void writeResponseToFifo(int fifoFd, struct Response response);
 void createFifoIfNotExist(const char* fifoName);
 int getRequestSize();
 int getResponseSize();
+void forwardRequestToChild(int childPipeWriteEndFd, struct Request request);
+void readForwardedRequestFromServer(int childPipeReadEndFd, struct Request* request);
 
 #endif // IPC_H

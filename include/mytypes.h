@@ -10,7 +10,9 @@
 enum CommandType {
     CONNECT,
     TRYCONNECT,
-    LIST
+    LIST,
+    HELP,
+    UNKNOWN
 };
 
 enum Status {
@@ -40,5 +42,15 @@ struct ClientArg {
     pid_t serverPid;
 };
 
+struct ConnectionRequest {
+    pid_t clientPid;
+    char responseFifoName[MAX_FILENAME_SIZE];
+};
+
+struct ConnectionInfo {
+    pid_t clientPid;
+    int childNum;
+    int pipeFds[2];
+};
 
 #endif // MYTYPES_H

@@ -9,13 +9,10 @@
 #include "ipc.h"
 #include "command_handler.h"
 #include "mytypes.h"
+#include "queue.h"
+#include "child.h"
 
 sig_atomic_t sigIntrCount = 0;
-sig_atomic_t sigChldCount = 0;
-
-void sigchldHandler(int signal) {
-    sigChldCount++;
-}
 
 void sigintHandler(int signal) {
     sigIntrCount++;
@@ -29,12 +26,6 @@ int main(int argc, char *argv[]) {
 
     // Set handler for sigchild
     struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = &sigchldHandler;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        errExit("sigaction");
-    }
-
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &sigintHandler;
     if (sigaction(SIGINT, &sa, NULL) == -1) {
@@ -53,9 +44,20 @@ int main(int argc, char *argv[]) {
 
     struct Request request;
     int isRequestReadInterrupted = 0;
+    int availableChildCount = serverArg.numOfClients;
+    // Create a server queue
+    struct Queue serverQueue;
+    initQueue(&serverQueue);
+    struct ConnectionRequest connectionRequest;
+    pid_t childPid = -1;
+    struct ConnectionInfo connectionInfos[serverArg.numOfClients];
+    initConnectionInfos(connectionInfos, serverArg.numOfClients);
+    int availableConnectionIndex = -1;
+    int connectionInfoIndex = -1;
+    int childPipeWriteEndFd = -1;
+    int isClientConnected = 0;
     while(1) {
         if (sigIntrCount > 0) {
-            printf("Interrupted\n");
             break;
         }
         isRequestReadInterrupted = readRequestFromFifo(requestFifoFd, &request);
@@ -64,12 +66,42 @@ int main(int argc, char *argv[]) {
         }
         switch(request.commandType) {
             case CONNECT:
-                handleConnectCommand(request);
+                handleConnectCommand(request, &serverQueue);
                 break;
             case TRYCONNECT:
                 break;
             case LIST:
                 break;
+            default:
+                connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);
+                childPipeWriteEndFd = connectionInfos[connectionInfoIndex].pipeFds[WRITE_END_PIPE];
+                forwardRequestToChild(childPipeWriteEndFd, request);
+                break;
+        }
+        // If available process exist then connect client
+        isClientConnected = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid) == -1;
+        if (!isQueueEmpty(&serverQueue) && availableChildCount > 0 && isClientConnected) {
+            dequeue(&serverQueue, &connectionRequest);
+            availableConnectionIndex = findAvailableConnection(connectionInfos, serverArg.numOfClients);
+            if (availableConnectionIndex == -1) {
+                errExit("findAvailableConnection");
+            }
+            addNewConnection(connectionInfos, serverArg.numOfClients, availableConnectionIndex, connectionRequest.clientPid);
+            childPid = fork();
+            if (childPid == -1) {
+                errExit("fork");
+            }
+            if (childPid == 0) {
+                if (close(connectionInfos->pipeFds[WRITE_END_PIPE]) == -1) {
+                    errExit("close pipeFds[1]");
+                }
+                childMain(connectionRequest, connectionInfos->pipeFds[READ_END_PIPE]);
+                exit(EXIT_SUCCESS);
+            }
+            if (close(connectionInfos->pipeFds[READ_END_PIPE]) == -1) {
+                errExit("close pipeFds[0]");
+            }
+            availableChildCount--;
         }
     }
 
@@ -79,3 +111,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
