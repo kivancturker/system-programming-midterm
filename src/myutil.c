@@ -144,6 +144,20 @@ enum CommandType getCommandTypeFromCommandString(const char* command) {
         return LIST;
     } else if (strcmp(command, "help") == 0) {
         return HELP;
-    } 
+    } else if(strcmp(command, "quit") == 0) {
+        return QUIT;
+    } else if (strcmp(command, "killServer") == 0) {
+        return KILL;
+    } else if (strcmp(command, "readF") == 0) {
+        return READF;
+    } else if (strcmp(command, "writeT") == 0) {
+        return WRITET;
+    } else if (strcmp(command, "upload") == 0) {
+        return UPLOAD;
+    } else if (strcmp(command, "download") == 0) {
+        return DOWNLOAD;
+    } else if (strcmp(command, "archServer") == 0) {
+        return ARCHSERVER;
+    }
     return UNKNOWN;
 }

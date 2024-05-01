@@ -101,6 +101,7 @@ void writeResponseToFifo(int fifoFd, struct Response response) {
     }
 }
 
+
 void createFifoIfNotExist(const char* fifoName) {
     if (unlink(fifoName) == -1 && errno != ENOENT) {
         errExit("unlink");

@@ -74,13 +74,24 @@ int main(int argc, char *argv[]) {
             break;
         }
         command[strlen(command) - 1] = '\0'; // Remove newline
-        commandType = getCommandTypeFromCommandString(command);
+        
+        char *commandTypePart = strtok(command, " ");
+        char *commandArgPart = strtok(NULL, "");
+
+        commandType = getCommandTypeFromCommandString(commandTypePart);
         if (commandType == UNKNOWN) {
             printf("Unknown command\n");
             continue;
         }
         request.clientPid = getpid();
         request.commandType = commandType;
+        // Add the command arguments to the request
+        if (commandArgPart != NULL) {
+            strncpy(request.commandArgs, commandArgPart, sizeof(request.commandArgs) - 1);
+        }
+        else {
+            request.commandArgs[0] = '\0';
+        }
 
         writeRequestToFifo(requestFifoFd, request);
         readResponseFromFifo(responseFifoFd, &response);

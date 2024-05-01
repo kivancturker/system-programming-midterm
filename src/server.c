@@ -84,6 +84,8 @@ int main(int argc, char *argv[]) {
                     break;
                 case TRYCONNECT:
                     break;
+                case KILL:
+                    break;
                 default:
                     connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);
                     childPipeWriteEndFd = connectionInfos[connectionInfoIndex].pipeFds[WRITE_END_PIPE];

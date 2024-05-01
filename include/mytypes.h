@@ -12,7 +12,13 @@ enum CommandType {
     TRYCONNECT,
     LIST,
     HELP,
+    READF,
+    WRITET,
+    UPLOAD,
+    DOWNLOAD,
+    ARCHSERVER,
     QUIT,
+    KILL,
     UNKNOWN
 };
 
