@@ -11,5 +11,6 @@ void destroyAllSemaphores(const char* dirName);
 
 
 char* readLineFromFile(const char* dirName, const char* filename, int lineNum);
+char* readWholeFile(const char* dirName, const char* filename);
 
 #endif // FILEOPS_H

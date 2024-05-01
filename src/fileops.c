@@ -121,3 +121,45 @@ char* readLineFromFile(const char* dirName, const char* filename, int lineNum) {
     fclose(file);
     return line;
 }
+
+char* readWholeFile(const char* dirName, const char* filename) {
+    char* content = NULL; // String to hold the file content
+    char filePath[MAX_FILENAME_SIZE];
+    sprintf(filePath, "%s/%s", dirName, filename);
+    FILE* file = fopen(filePath, "r");
+    if (file == NULL) {
+        return NULL;
+    }
+
+    // Allocate initial memory for the content string
+    size_t capacity = 1024; // Initial capacity
+    content = (char*)malloc(capacity);
+    if (content == NULL) {
+        fclose(file);
+        return NULL;
+    }
+    content[0] = '\0'; // Initialize the string
+
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    while ((read = getline(&line, &len, file)) != -1) {
+        // Resize the content string if needed
+        if (strlen(content) + read >= capacity) {
+            capacity *= 2; // Double the capacity
+            char* temp = realloc(content, capacity);
+            if (temp == NULL) {
+                free(content);
+                fclose(file);
+                return NULL;
+            }
+            content = temp;
+        }
+        // Append the line to the content string
+        strcat(content, line);
+    }
+    free(line); // Free the memory allocated by getline
+
+    fclose(file);
+    return content;
+}

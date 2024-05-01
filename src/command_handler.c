@@ -133,30 +133,18 @@ void handleReadFCommand(struct Request request, int responseFifoFd, const char* 
     }
 
     char* lineNumStr = strtok(NULL, " ");
-    if (lineNumStr == NULL) {
-        // Handle error: no line number found
-        response.status = ERROR;
-        strcpy(response.payload, "Argument for line# is invalid\n");
-        writeResponseToFifo(responseFifoFd, response);
-        return;
+    int lineNum = 0;  
+    if (lineNumStr != NULL) { 
+        lineNum = atoi(lineNumStr);
     }
-
-    int lineNum = atoi(lineNumStr);
-    if (lineNum == 0 && strcmp(lineNumStr, "0") != 0) {
+    /*
+    if (lineNum == 0 && strcmp(lineNumStr, "0") != 0 && lineNumStr != NULL) {
         // Handle error: conversion to integer failed
         response.status = ERROR;
         strcpy(response.payload, "Argument for line# is invalid\n");
         writeResponseToFifo(responseFifoFd, response);
         return;
-    }
-
-    // Check if arguments are valid There need to be two arguements
-    if (filename == NULL || lineNumStr == NULL) {
-        response.status = ERROR;
-        strcpy(response.payload, "Invalid arguments\n");
-        writeResponseToFifo(responseFifoFd, response);
-        return;
-    }
+    }*/
     // Check if the file exists
     if (!isFileExists(serverDir, filename)) {
         response.status = ERROR;
@@ -174,7 +162,14 @@ void handleReadFCommand(struct Request request, int responseFifoFd, const char* 
         exit(EXIT_FAILURE);
     }
     sem_wait(semaphore);
-    char* line = readLineFromFile(serverDir, filename, lineNum);
+    char* line;
+    if (lineNumStr == NULL){
+        // Read the whole file
+        line = readWholeFile(serverDir, filename);
+    }
+    else {
+        line = readLineFromFile(serverDir, filename, lineNum);
+    }
     if (line == NULL) {
         response.status = ERROR;
         strcpy(response.payload, "File does not exist\n");
@@ -183,6 +178,7 @@ void handleReadFCommand(struct Request request, int responseFifoFd, const char* 
     }
     sem_post(semaphore);
     writeResponseToFifo(responseFifoFd, response);
+    free(line);
 }
 
 // ********************** Response Part **********************
