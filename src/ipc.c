@@ -26,7 +26,7 @@ int readRequestFromFifo(int fifoFd, struct Request* request) {
     }
     // Ensure that enough bytes were read
     if (bytesRead < requestByteSize && bytesRead != 0) {
-        fprintf(stderr, "Incomplete data read from fifo\n");
+        fprintf(stderr, "Incomplete data read from request fifo\n");
         exit(EXIT_FAILURE);
     }
     int offset = 0;
@@ -72,7 +72,7 @@ void readResponseFromFifo(int fifoFd, struct Response* response) {
 
     // Ensure that enough bytes were read
     if (bytesRead < responseByteSize) {
-        fprintf(stderr, "Incomplete data read from fifo\n");
+        fprintf(stderr, "Incomplete data read from response fifo\n");
         exit(EXIT_FAILURE);
     }
 

@@ -6,6 +6,7 @@
         "linkedlist.h": "c",
         "myutil.h": "c",
         "child.h": "c",
-        "mytypes.h": "c"
+        "mytypes.h": "c",
+        "fileops.h": "c"
     }
 }

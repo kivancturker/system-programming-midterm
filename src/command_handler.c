@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <semaphore.h>
 
 void handleCommand(struct Request request, int responseFifoFd, const char* serverDir) {
     struct Response response;
@@ -16,6 +17,9 @@ void handleCommand(struct Request request, int responseFifoFd, const char* serve
             break;
         case LIST:
             handleListCommand(request, responseFifoFd, serverDir);
+            break;
+        case READF:
+            handleReadFCommand(request, responseFifoFd, serverDir);
             break;
         default:
             response.status = ERROR;
@@ -106,11 +110,78 @@ void handleListCommand(struct Request request, int responseFifoFd, const char* s
     char* filenames[numOfFiles];
     getAllTheFilenamesInDir(serverDir, filenames, numOfFiles);
     struct Response response;
+    memset(response.payload, 0, MAX_PAYLOAD_SIZE);
     response.status = OK;
     for (int i = 0; i < numOfFiles; i++) {
         strcat(response.payload, filenames[i]);
         strcat(response.payload, "\n");
     }
+    writeResponseToFifo(responseFifoFd, response);
+}
+
+void handleReadFCommand(struct Request request, int responseFifoFd, const char* serverDir) {
+    struct Response response;
+    response.status = OK;
+    // First argument is the filename and second is linenum
+    char* filename = strtok(request.commandArgs, " ");
+    if (filename == NULL) {
+        // Handle error: no filename found
+        response.status = ERROR;
+        strcpy(response.payload, "Argument for filename is invalid\n");
+        writeResponseToFifo(responseFifoFd, response);
+        return;
+    }
+
+    char* lineNumStr = strtok(NULL, " ");
+    if (lineNumStr == NULL) {
+        // Handle error: no line number found
+        response.status = ERROR;
+        strcpy(response.payload, "Argument for line# is invalid\n");
+        writeResponseToFifo(responseFifoFd, response);
+        return;
+    }
+
+    int lineNum = atoi(lineNumStr);
+    if (lineNum == 0 && strcmp(lineNumStr, "0") != 0) {
+        // Handle error: conversion to integer failed
+        response.status = ERROR;
+        strcpy(response.payload, "Argument for line# is invalid\n");
+        writeResponseToFifo(responseFifoFd, response);
+        return;
+    }
+
+    // Check if arguments are valid There need to be two arguements
+    if (filename == NULL || lineNumStr == NULL) {
+        response.status = ERROR;
+        strcpy(response.payload, "Invalid arguments\n");
+        writeResponseToFifo(responseFifoFd, response);
+        return;
+    }
+    // Check if the file exists
+    if (!isFileExists(serverDir, filename)) {
+        response.status = ERROR;
+        strcpy(response.payload, "File does not exist\n");
+        writeResponseToFifo(responseFifoFd, response);
+        return;
+    }
+    // Check semaphore availability
+    char semaphoreName[MAX_SEMAPHORE_NAME_SIZE];
+    // Careful you need to use getppid() here, because child process is the one that is going to read the file
+    getSemaphoreNameByFilename(filename, getppid(), semaphoreName);
+    sem_t* semaphore = sem_open(semaphoreName, O_CREAT, 0666, 1);
+    if (semaphore == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+    sem_wait(semaphore);
+    char* line = readLineFromFile(serverDir, filename, lineNum);
+    if (line == NULL) {
+        response.status = ERROR;
+        strcpy(response.payload, "File does not exist\n");
+    } else {
+        strcpy(response.payload, line);
+    }
+    sem_post(semaphore);
     writeResponseToFifo(responseFifoFd, response);
 }
 
@@ -124,10 +195,17 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
         case LIST:
             handleListResponse(response);
             break;
+        case READF:
+            handleReadFResponse(response);
+            break;
         default:
             fprintf(stderr, "Invalid command type\n");
             break;
     }
+}
+
+void handleErrorResponse(struct Response response) {
+    fprintf(stderr, "Error: %s\n", response.payload);
 }
 
 void handleHelpResponse(struct Response response) {
@@ -135,5 +213,9 @@ void handleHelpResponse(struct Response response) {
 }
 
 void handleListResponse(struct Response response) {
+    printf("%s\n", response.payload);
+}
+
+void handleReadFResponse(struct Response response) {
     printf("%s\n", response.payload);
 }

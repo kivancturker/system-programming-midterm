@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <semaphore.h>
 
 #include "myutil.h"
 #include "ipc.h"
@@ -12,6 +13,7 @@
 #include "mytypes.h"
 #include "queue.h"
 #include "child.h"
+#include "fileops.h"
 
 sig_atomic_t sigIntrCount = 0;
 sig_atomic_t sigChildCount = 0;
@@ -43,6 +45,9 @@ int main(int argc, char *argv[]) {
     if (sigaction(SIGINT, &sa, NULL) == -1) {
         errExit("sigaction");
     }
+
+    // Create named semaphore for every file in the directory
+    createSemaphores(serverArg.dirname);
 
     printf("Server Started PID: %d\n", getpid());
     printf("Waiting for clients...\n");
@@ -135,6 +140,8 @@ int main(int argc, char *argv[]) {
     if (close(requestFifoFd) == -1) {
         errExit("close request fifo");
     }
+
+    destroyAllSemaphores(serverArg.dirname);
 
     return 0;
 }

@@ -9,9 +9,12 @@ void handleConnectCommand(struct Request request, struct Queue *serverQueue, con
 void handleTryConnectCommand(struct Request request);
 void handleHelpCommand(struct Request request, int responseFifoFd);
 void handleListCommand(struct Request request, int responseFifoFd, const char* serverDir);
+void handleReadFCommand(struct Request request, int responseFifoFd, const char* serverDir);
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response);
+void handleErrorResponse(struct Response response);
 void handleHelpResponse(struct Response response);
 void handleListResponse(struct Response response);
+void handleReadFResponse(struct Response response);
 
 #endif // COMMAND_HANDLER_H

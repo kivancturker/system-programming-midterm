@@ -95,7 +95,12 @@ int main(int argc, char *argv[]) {
 
         writeRequestToFifo(requestFifoFd, request);
         readResponseFromFifo(responseFifoFd, &response);
-        handleCommandResponseByCommandType(commandType, response);
+        if (response.status == OK) {
+            handleCommandResponseByCommandType(commandType, response);
+        }
+        else {
+            handleErrorResponse(response);
+        }
     }
 
     return 0;

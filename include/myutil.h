@@ -22,6 +22,6 @@ int findAvailableConnection(struct ConnectionInfo connectionInfos[], int numOfCl
 int findConnectionIndexByClientPid(struct ConnectionInfo connectionInfos[], int numOfClients, pid_t clientPid);
 int findConnectionIndexByChildPid(struct ConnectionInfo connectionInfos[], int numOfClients, pid_t childPid);
 enum CommandType getCommandTypeFromCommandString(const char* command);
-void createSemaphoreName(const char* filename, pid_t parentPID, char* semaphoreName);
+void getSemaphoreNameByFilename(const char* filename, pid_t parentPID, char* semaphoreName);
 
 #endif // MYUTIL_H
