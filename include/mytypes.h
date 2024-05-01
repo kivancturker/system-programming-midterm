@@ -6,6 +6,8 @@
 #define MAX_ARG_SIZE 256
 #define MAX_PAYLOAD_SIZE 1024
 #define MAX_FILENAME_SIZE 256
+#define MAX_SEMAPHORE_NAME_SIZE 512
+#define MAX_FILECOUNT 1024
 
 enum CommandType {
     CONNECT,
@@ -53,6 +55,7 @@ struct ConnectionRequest {
     pid_t clientPid;
     int clientNum;
     char responseFifoName[MAX_FILENAME_SIZE];
+    char serverDir[MAX_FILENAME_SIZE];
 };
 
 struct ConnectionInfo {

@@ -1,17 +1,21 @@
 #include "command_handler.h"
 #include "ipc.h"
+#include "fileops.h"
 
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
-void handleCommand(struct Request request, int responseFifoFd) {
+void handleCommand(struct Request request, int responseFifoFd, const char* serverDir) {
     struct Response response;
     response.status = OK;
     switch (request.commandType) {
         case HELP:
             handleHelpCommand(request, responseFifoFd);
+            break;
+        case LIST:
+            handleListCommand(request, responseFifoFd, serverDir);
             break;
         default:
             response.status = ERROR;
@@ -21,9 +25,10 @@ void handleCommand(struct Request request, int responseFifoFd) {
     }
 }
 
-void handleConnectCommand(struct Request request, struct Queue *serverQueue) {
+void handleConnectCommand(struct Request request, struct Queue *serverQueue, const char* serverDir) {
     struct ConnectionRequest connectionRequest;
     connectionRequest.clientPid = request.clientPid;
+    strcpy(connectionRequest.serverDir, serverDir);
     strcpy(connectionRequest.responseFifoName, request.commandArgs);
     int isEnqueued = enqueue(serverQueue, connectionRequest);
     if (isEnqueued == -1) {
@@ -96,6 +101,19 @@ void handleHelpCommand(struct Request request, int responseFifoFd) {
     writeResponseToFifo(responseFifoFd, response);
 }
 
+void handleListCommand(struct Request request, int responseFifoFd, const char* serverDir) {
+    int numOfFiles = getNumOfFilesInDir(serverDir);
+    char* filenames[numOfFiles];
+    getAllTheFilenamesInDir(serverDir, filenames, numOfFiles);
+    struct Response response;
+    response.status = OK;
+    for (int i = 0; i < numOfFiles; i++) {
+        strcat(response.payload, filenames[i]);
+        strcat(response.payload, "\n");
+    }
+    writeResponseToFifo(responseFifoFd, response);
+}
+
 // ********************** Response Part **********************
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response) {
@@ -103,7 +121,9 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
         case HELP:
             handleHelpResponse(response);
             break;
-        // Add cases for other command types here
+        case LIST:
+            handleListResponse(response);
+            break;
         default:
             fprintf(stderr, "Invalid command type\n");
             break;
@@ -111,5 +131,9 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
 }
 
 void handleHelpResponse(struct Response response) {
+    printf("%s\n", response.payload);
+}
+
+void handleListResponse(struct Response response) {
     printf("%s\n", response.payload);
 }

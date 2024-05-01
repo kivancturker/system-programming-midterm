@@ -27,8 +27,8 @@ void sigchildHandler(int signal) {
 int main(int argc, char *argv[]) {
     struct ServerArg serverArg;
     parseServerArgs(argc, argv, &serverArg);
-    // Disable for now
-    // createDirIfNotExist(serverArg.filename);
+
+    createDirIfNotExist(serverArg.dirname);
 
     // Set handler for sigchild
     struct sigaction sa;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
             }
             switch(request.commandType) {
                 case CONNECT:
-                    handleConnectCommand(request, &serverQueue);
+                    handleConnectCommand(request, &serverQueue, serverArg.dirname);
                     break;
                 case TRYCONNECT:
                     break;

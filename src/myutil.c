@@ -161,3 +161,8 @@ enum CommandType getCommandTypeFromCommandString(const char* command) {
     }
     return UNKNOWN;
 }
+
+void createSemaphoreName(const char* filename, pid_t parentPID, char* semaphoreName) {
+    // Create the semaphore name using filename and parentPID
+    snprintf(semaphoreName, MAX_SEMAPHORE_NAME_SIZE, "/%s_%d_semaphore", filename, parentPID);
+}

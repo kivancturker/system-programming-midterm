@@ -8,8 +8,10 @@
 
 void childMain(struct ConnectionRequest connectionRequest, int pipeFd) {
     char responseFifoName[MAX_FILENAME_SIZE];
+    char serverDir[MAX_FILENAME_SIZE];
     pid_t clientPid = connectionRequest.clientPid;
     strcpy(responseFifoName, connectionRequest.responseFifoName);
+    strcpy(serverDir, connectionRequest.serverDir);
 
     int responseFifoFd = open(responseFifoName, O_WRONLY, 0666);
     if (responseFifoFd == -1) {
@@ -26,7 +28,7 @@ void childMain(struct ConnectionRequest connectionRequest, int pipeFd) {
         if (request.commandType == QUIT) {
             break;
         }
-        handleCommand(request, responseFifoFd);
+        handleCommand(request, responseFifoFd, serverDir);
     }
 
     if (close(pipeFd) == -1) {
