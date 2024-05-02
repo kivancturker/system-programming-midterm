@@ -18,5 +18,6 @@ int getRequestSize();
 int getResponseSize();
 void forwardRequestToChild(int childPipeWriteEndFd, struct Request request);
 void readForwardedRequestFromServer(int childPipeReadEndFd, struct Request* request);
+void sendErrorResponse(int responseFifoFd, const char* errorMessage);
 
 #endif // IPC_H

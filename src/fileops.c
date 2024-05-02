@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <semaphore.h>
+#include <fcntl.h>
 
 void getAllTheFilenamesInDir(const char* dirName, char* filenames[], int size) {
     DIR *dir;
@@ -87,6 +88,17 @@ void createSemaphores(const char* dirName) {
     }
 }
 
+void createSemaphoreForGivenFile(const char* dirName, const char* filename) {
+    char semaphoreName[MAX_SEMAPHORE_NAME_SIZE];
+    getSemaphoreNameByFilename(filename, getpid(), semaphoreName);
+    sem_t* semaphore = sem_open(semaphoreName, O_CREAT, 0666, 1);
+    if (semaphore == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+    sem_close(semaphore);
+}
+
 void destroyAllSemaphores(const char* dirName) {
     int numOfFiles = getNumOfFilesInDir(dirName);
     char* filenames[numOfFiles];
@@ -162,4 +174,52 @@ char* readWholeFile(const char* dirName, const char* filename) {
 
     fclose(file);
     return content;
+}
+
+// If lineNum -1 then append the line at the end for the file
+void writeLineToFile(const char* dirName, const char* filename, const char* lineToInsert, int lineNum) {
+    char* tempFilename = "tempfile";
+    char filePath[MAX_FILENAME_SIZE];
+    char tempFilePath[MAX_FILENAME_SIZE];
+    sprintf(filePath, "%s/%s", dirName, filename);
+    sprintf(tempFilePath, "%s/%s", dirName, tempFilename);
+    FILE* file = fopen(filePath, "r");
+    FILE* tempFile = fopen(tempFilePath, "w");
+    if (file == NULL || tempFile == NULL) {
+        return;
+    }
+
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int currentLine = 1;
+    int appended = 0; // Flag to check if line is appended
+    while ((read = getline(&line, &len, file)) != -1) {
+        if (lineNum == -1 && read == 1 && line[0] == '\n') {
+            // Skip empty lines at the end of the file
+            continue;
+        }
+        if (currentLine == lineNum) {
+            fprintf(tempFile, "%s\n", lineToInsert);
+            appended = 1;
+        }
+        fprintf(tempFile, "%s", line);
+        currentLine++;
+    }
+
+    // Append the line at the end if lineNum is -1 and not already appended
+    if (lineNum == -1 && !appended) {
+        // If the previous line doesn't have a newline character, add one
+        char* prevLine = readLineFromFile(dirName, filename, currentLine - 1);
+        if (prevLine[strlen(prevLine) - 1] != '\n') {
+            fprintf(tempFile, "\n");
+        }
+        fprintf(tempFile, "%s\n", lineToInsert);
+    }
+
+    free(line);
+    fclose(file);
+    fclose(tempFile);
+    remove(filePath);
+    rename(tempFilePath, filePath);
 }

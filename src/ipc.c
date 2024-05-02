@@ -134,3 +134,11 @@ void readForwardedRequestFromServer(int childPipeReadEndFd, struct Request* requ
         errExit("read");
     }
 }
+
+void sendErrorResponse(int responseFifoFd, const char* errorMessage) {
+    struct Response response;
+    memset(&response, 0, sizeof(struct Response));
+    response.status = ERROR;
+    strncpy(response.payload, errorMessage, MAX_PAYLOAD_SIZE);
+    writeResponseToFifo(responseFifoFd, response);
+}

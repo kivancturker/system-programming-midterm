@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <semaphore.h>
+#include <errno.h>
 
 void handleCommand(struct Request request, int responseFifoFd, const char* serverDir) {
     struct Response response;
@@ -20,6 +21,9 @@ void handleCommand(struct Request request, int responseFifoFd, const char* serve
             break;
         case READF:
             handleReadFCommand(request, responseFifoFd, serverDir);
+            break;
+        case WRITET:
+            handleWriteTCommand(request, responseFifoFd, serverDir);
             break;
         default:
             response.status = ERROR;
@@ -137,14 +141,6 @@ void handleReadFCommand(struct Request request, int responseFifoFd, const char* 
     if (lineNumStr != NULL) { 
         lineNum = atoi(lineNumStr);
     }
-    /*
-    if (lineNum == 0 && strcmp(lineNumStr, "0") != 0 && lineNumStr != NULL) {
-        // Handle error: conversion to integer failed
-        response.status = ERROR;
-        strcpy(response.payload, "Argument for line# is invalid\n");
-        writeResponseToFifo(responseFifoFd, response);
-        return;
-    }*/
     // Check if the file exists
     if (!isFileExists(serverDir, filename)) {
         response.status = ERROR;
@@ -181,6 +177,86 @@ void handleReadFCommand(struct Request request, int responseFifoFd, const char* 
     free(line);
 }
 
+void handleWriteTCommand(struct Request request, int responseFifoFd, const char* serverDir) {
+    struct Response response;
+    memset(response.payload, 0, MAX_PAYLOAD_SIZE);
+    response.status = OK;
+    // First argument is the filename second is optional line number and third is the string to write
+    char filename[MAX_FILENAME_SIZE];
+    int lineNum = 0;
+    char stringToWrite[MAX_PAYLOAD_SIZE];
+    char errMessage[256];
+    if (parseWriteTCommandArgs(request.commandArgs, filename, &lineNum, stringToWrite, errMessage) == -1) {
+        sendErrorResponse(responseFifoFd, errMessage);
+        return;
+    }
+    // Check if the file exists
+    int fd = -1;
+    if (!isFileExists(serverDir, filename)) {
+        // Create the file
+        NO_EINTR(fd = open(filename, O_CREAT | O_WRONLY, 0666));
+        if (fd == -1) {
+            perror("open");
+            exit(EXIT_FAILURE);
+        }
+        // I close it because I just wantted to create it
+        if (close(fd) == -1) {
+            perror("close");
+            exit(EXIT_FAILURE);
+        }
+        // Create the semaphore for the file
+        createSemaphoreForGivenFile(serverDir, filename);
+    }
+    // Check semaphore availability
+    char semaphoreName[MAX_SEMAPHORE_NAME_SIZE];
+    // Careful you need to use getppid() here, because child process is the one that is going to read the file
+    getSemaphoreNameByFilename(filename, getppid(), semaphoreName);
+    sem_t* semaphore = sem_open(semaphoreName, O_CREAT, 0666, 1);
+    if (semaphore == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+    sem_wait(semaphore);
+    writeLineToFile(serverDir, filename, stringToWrite, lineNum);
+    sem_post(semaphore);
+    strcpy(response.payload, "Write successful\n");
+    writeResponseToFifo(responseFifoFd, response);
+}
+
+// Return -1 if there is an error, 0 otherwise
+int parseWriteTCommandArgs(char* commandArgs, char* filename, int* lineNum, char* stringToWrite, char* errMessage) {
+    char commandArgCopy[MAX_PAYLOAD_SIZE];
+    strcpy(commandArgCopy, commandArgs);
+
+    strcpy(filename, strtok(commandArgs, " "));
+    if (filename == NULL) {
+        strcpy(errMessage, "Argument for filename is invalid\n");
+        return -1;
+    }
+
+    char* lineNumStr = strtok(NULL, " ");
+    if (lineNumStr == NULL) {
+        strcpy(errMessage, "Argument for line number is invalid\n");
+        return -1;
+    }
+
+    // Check if the line number is a valid integer
+    char* end;
+    *lineNum = (int) strtol(lineNumStr, &end, 10);
+    if (end == lineNumStr || *end != '\0' || errno == ERANGE) {
+        // lineNumStr is not a valid integer
+        // Then the argument is writeT <filename> <string>
+        strcpy(stringToWrite, strtok(commandArgCopy, " ")); // Just to get rid of the filename part
+        strcpy(stringToWrite, strtok(NULL, "")); // Entire srting after the second space
+        *lineNum = -1;
+    }
+    else {
+        // lineNumStr is a valid integer
+        strcpy(stringToWrite, strtok(NULL, ""));
+    }
+    return 0;
+}
+
 // ********************** Response Part **********************
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response) {
@@ -193,6 +269,9 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
             break;
         case READF:
             handleReadFResponse(response);
+            break;
+        case WRITET:
+            handleWriteTResponse(response);
             break;
         default:
             fprintf(stderr, "Invalid command type\n");
@@ -213,5 +292,9 @@ void handleListResponse(struct Response response) {
 }
 
 void handleReadFResponse(struct Response response) {
+    printf("%s\n", response.payload);
+}
+
+void handleWriteTResponse(struct Response response) {
     printf("%s\n", response.payload);
 }

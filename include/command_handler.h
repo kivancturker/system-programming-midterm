@@ -10,11 +10,14 @@ void handleTryConnectCommand(struct Request request);
 void handleHelpCommand(struct Request request, int responseFifoFd);
 void handleListCommand(struct Request request, int responseFifoFd, const char* serverDir);
 void handleReadFCommand(struct Request request, int responseFifoFd, const char* serverDir);
+void handleWriteTCommand(struct Request request, int responseFifoFd, const char* serverDir);
+int parseWriteTCommandArgs(char* commandArgs, char* filename, int* lineNum, char* stringToWrite, char* errMessage);
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response);
 void handleErrorResponse(struct Response response);
 void handleHelpResponse(struct Response response);
 void handleListResponse(struct Response response);
 void handleReadFResponse(struct Response response);
+void handleWriteTResponse(struct Response response);
 
 #endif // COMMAND_HANDLER_H

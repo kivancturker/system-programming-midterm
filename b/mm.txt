@@ -1,4 +1,9 @@
-Burada birinci satir yazılı
-Buradada ikinci satir
-3 var burda
-4 galiba
+Yeni birinci satir
+Birinci satir
+Ucuncuydu eskiden
+Ikinci satir
+Ucuncu satir
+Dorduncu satir
+Bu en sona eklenecek string
+Tekrar en sona ekleme yapalim o zaman
+teksatir
