@@ -176,7 +176,7 @@ void handleReadFCommand(struct Request request, int responseFifoFd, const char* 
     }
     if (line == NULL) {
         response.status = ERROR;
-        strcpy(response.payload, "File does not exist\n");
+        strcpy(response.payload, "<No Record Exist in This Line>\n");
     } else {
         strcpy(response.payload, line);
     }
@@ -203,7 +203,7 @@ void handleWriteTCommand(struct Request request, int responseFifoFd, const char*
     if (!isFileExists(serverDir, filename)) {
         // Create the file in the directory
         char filePath[MAX_FILENAME_SIZE];
-        sprintf(filePath, "%s/%s", serverDir, filename);
+        snprintf(filePath, MAX_FILENAME_SIZE, "%s/%s", serverDir, filename);
         NO_EINTR(fd = open(filePath, O_CREAT | O_WRONLY, 0666));
         if (fd == -1) {
             perror("open");

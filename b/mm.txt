@@ -1,3 +1,4 @@
+Bunu en basa yazabilir misiniz acaba
 Buda bir bir bir
 Yeni birinci satir
 Birinci satir
@@ -9,3 +10,4 @@ Bu en sona eklenecek string
 Tekrar en sona ekleme yapalim o zaman
 teksatir
 Buraya bak lan
+Bunuda yaz baskan

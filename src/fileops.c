@@ -117,9 +117,12 @@ void destroyAllSemaphores(const char* dirName) {
 }
 
 char* readLineFromFile(const char* dirName, const char* filename, int lineNum) {
+    if (lineNum < 1) {
+        return NULL;
+    }
     char* line = NULL;
     char filePath[MAX_FILENAME_SIZE];
-    sprintf(filePath, "%s/%s", dirName, filename);
+    snprintf(filePath, MAX_FILENAME_SIZE, "%s/%s", dirName, filename);
     FILE* file = fopen(filePath, "r");
     if (file == NULL) {
         return NULL;
@@ -130,13 +133,16 @@ char* readLineFromFile(const char* dirName, const char* filename, int lineNum) {
     int currentLine = 1;
     while ((read = getline(&line, &len, file)) != -1) {
         if (currentLine == lineNum) {
-            break;
+            fclose(file);
+            return line;
         }
         currentLine++;
+        free(line);
+        line = NULL;
     }
 
     fclose(file);
-    return line;
+    return NULL;
 }
 
 char* readWholeFile(const char* dirName, const char* filename) {
@@ -183,11 +189,14 @@ char* readWholeFile(const char* dirName, const char* filename) {
 
 // If lineNum -1 then append the line at the end for the file
 void writeLineToFile(const char* dirName, const char* filename, const char* lineToInsert, int lineNum) {
+    if (lineToInsert == NULL) {
+        return;
+    }
     char* tempFilename = "tmpX8yQ";
     char filePath[MAX_FILENAME_SIZE];
     char tempFilePath[MAX_FILENAME_SIZE];
-    sprintf(filePath, "%s/%s", dirName, filename);
-    sprintf(tempFilePath, "%s/%s", dirName, tempFilename);
+    snprintf(filePath, MAX_FILENAME_SIZE, "%s/%s", dirName, filename);
+    snprintf(tempFilePath, MAX_FILENAME_SIZE, "%s/%s", dirName, tempFilename);
     FILE* file = fopen(filePath, "r");
     FILE* tempFile = fopen(tempFilePath, "w");
     if (file == NULL || tempFile == NULL) {
@@ -203,6 +212,8 @@ void writeLineToFile(const char* dirName, const char* filename, const char* line
     while ((read = getline(&line, &len, file)) != -1) {
         if (lineNum == -1 && read == 1 && line[0] == '\n') {
             // Skip empty lines at the end of the file
+            free(line);
+            line = NULL;
             continue;
         }
         if (currentLine == lineNum) {
@@ -211,19 +222,33 @@ void writeLineToFile(const char* dirName, const char* filename, const char* line
         }
         fprintf(tempFile, "%s", line);
         currentLine++;
+        free(line);
+        line = NULL;
+    }
+    if (line != NULL) {
+        free(line);
+        line = NULL;
     }
 
     // Append the line at the end if lineNum is -1 and not already appended
+    char* prevLine = NULL;
     if (lineNum == -1 && !appended) {
         // If the previous line doesn't have a newline character, add one
-        char* prevLine = readLineFromFile(dirName, filename, currentLine - 1);
-        if (prevLine[strlen(prevLine) - 1] != '\n') {
-            fprintf(tempFile, "\n");
+        prevLine = readLineFromFile(dirName, filename, currentLine - 1);
+        if (prevLine == NULL) {
+            fprintf(stderr, "writeLineToFile readLineFromFile");
+        }
+        else {
+            if (prevLine[strlen(prevLine) - 1] != '\n') {
+                fprintf(tempFile, "\n");
+            }
         }
         fprintf(tempFile, "%s\n", lineToInsert);
+        if (prevLine != NULL) {
+            free(prevLine);
+        }
     }
 
-    free(line);
     fclose(file);
     fclose(tempFile);
     remove(filePath);

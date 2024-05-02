@@ -46,6 +46,7 @@ int readRequestFromFifo(int fifoFd, struct Request* request) {
 void writeRequestToFifo(int fifoFd, struct Request request) {
     size_t requestByteSize = getRequestSize();
     char requestBuffer[requestByteSize];
+    memset(requestBuffer, 0, requestByteSize);
     int offset = 0;
 
     // Copy the data of the struct into the buffer
@@ -90,6 +91,7 @@ void readResponseFromFifo(int fifoFd, struct Response* response) {
 void writeResponseToFifo(int fifoFd, struct Response response) {
     int responseByteSize = getResponseSize();
     char responseBuffer[responseByteSize];
+    memset(responseBuffer, 0, responseByteSize);
     int offset = 0;
 
     // Copy the data of the struct into the buffer
