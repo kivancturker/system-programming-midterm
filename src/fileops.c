@@ -49,9 +49,14 @@ int getNumOfFilesInDir(const char* dirName) {
     }
 
     while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            numOfFiles++;
+        }
+        /* // Old code
         if (entry->d_type == DT_REG) {
             numOfFiles++;
         }
+        */
     }
 
     closedir(dir);

@@ -13,6 +13,10 @@ void createUniqueResponseFifoName(char *responseFifoName, int clientPid) {
     sprintf(responseFifoName, RESPONSE_FIFO_TEMPLATE "%d", clientPid);
 }
 
+void createUniqueFileTransferFifoName(char *fileTransferFifoName, int clientPid) {
+    sprintf(fileTransferFifoName, FILETRANSFER_FIFO_TEMPLATE "%d", clientPid);
+}
+
 int readRequestFromFifo(int fifoFd, struct Request* request) {
     int requestByteSize = getRequestSize();
     int bytesRead = 0;
@@ -141,4 +145,124 @@ void sendErrorResponse(int responseFifoFd, const char* errorMessage) {
     response.status = ERROR;
     strncpy(response.payload, errorMessage, MAX_PAYLOAD_SIZE);
     writeResponseToFifo(responseFifoFd, response);
+}
+
+int transferFile(const char* filepath, const char* fileTransferFifoName) {
+    // Open FIFO for writing
+    int fifoFd = open(fileTransferFifoName, O_WRONLY);
+    if (fifoFd == -1) {
+        perror("open FIFO for writing");
+        return -1;
+    }
+
+    // Open file for reading
+    FILE *file = fopen(filepath, "rb");
+    if (file == NULL) {
+        perror("open file for reading");
+        close(fifoFd);
+        return -1;
+    }
+
+    // Transfer file data
+    ssize_t totalBytesTransferred = 0;
+    char buffer[CHUNK_SIZE];
+    ssize_t bytesRead;
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+        ssize_t bytesWritten = write(fifoFd, buffer, bytesRead);
+        if (bytesWritten == -1) {
+            perror("write to FIFO");
+            fclose(file);
+            close(fifoFd);
+            return -1;
+        }
+        totalBytesTransferred += bytesWritten;
+    }
+    // Check for errors or end-of-file
+    if (ferror(file)) {
+        perror("read from file");
+        fclose(file);
+        close(fifoFd);
+        return -1;
+    }
+
+    // Close file and FIFO
+    fclose(file);
+    close(fifoFd);
+
+    // Return total bytes transferred
+    return totalBytesTransferred;
+}
+
+int receiveFile(const char* filepath, const char* fileTransferFifoName) {
+    int totalBytesRead = 0;
+
+    // Open FIFO for reading
+    int fifoFd = open(fileTransferFifoName, O_RDONLY);
+    if (fifoFd == -1) {
+        perror("open FIFO for reading");
+        return -1;
+    }
+
+    // Create or open file for writing
+    FILE *file = fopen(filepath, "wb");
+    if (file == NULL) {
+        perror("open file for writing");
+        close(fifoFd);
+        return -1;
+    }
+
+    mode_t fileMode = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
+    if (chmod(filepath, fileMode) == -1) {
+        perror("set file permissions of received file");
+        fclose(file);
+        close(fifoFd);
+        return -1;
+    }
+
+    // Receive file data
+    char buffer[CHUNK_SIZE];
+    ssize_t bytesRead;
+    while ((bytesRead = read(fifoFd, buffer, sizeof(buffer))) > 0) {
+        ssize_t bytesWritten = fwrite(buffer, 1, bytesRead, file);
+        if (bytesWritten < bytesRead) {
+            perror("write to file");
+            fclose(file);
+            close(fifoFd);
+            return -1;
+        }
+        totalBytesRead += bytesRead;
+    }
+
+    // Check for errors or end-of-file
+    if (bytesRead == -1) {
+        perror("read from FIFO");
+        fclose(file);
+        close(fifoFd);
+        return -1;
+    }
+
+    // If transfer was cancelled, delete the file
+    if (totalBytesRead == 0) {
+        if (unlink(filepath) == -1) {
+            errExit("unlink");
+        }
+    }
+
+    // Close file and FIFO
+    fclose(file);
+    close(fifoFd);
+
+    return totalBytesRead;
+}
+
+void cancelTransfer(const char* fileTransferFifoName) {
+    int fd = open(fileTransferFifoName, O_WRONLY);
+    if (fd == -1) {
+        perror("open FIFO for writing");
+        return;
+    }
+    if (close(fd) == -1) {
+        perror("close FIFO");
+        return;
+    }
 }

@@ -12,6 +12,7 @@ void handleListCommand(struct Request request, int responseFifoFd, const char* s
 void handleReadFCommand(struct Request request, int responseFifoFd, const char* serverDir);
 void handleWriteTCommand(struct Request request, int responseFifoFd, const char* serverDir);
 int parseWriteTCommandArgs(char* commandArgs, char* filename, int* lineNum, char* stringToWrite, char* errMessage);
+void handleUploadCommand(struct Request request, int responseFifoFd, const char* serverDir);
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response);
 void handleErrorResponse(struct Response response);
@@ -19,5 +20,6 @@ void handleHelpResponse(struct Response response);
 void handleListResponse(struct Response response);
 void handleReadFResponse(struct Response response);
 void handleWriteTResponse(struct Response response);
+void handleUploadResponse(struct Response response);
 
 #endif // COMMAND_HANDLER_H

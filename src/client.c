@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
 
     enum CommandType commandType;
     char command[255];
+    char fileTransferFifoName[MAX_FILENAME_SIZE];
     while(1) {
         printf("\nEnter command: ");
         fgets(command, 255, stdin);
@@ -82,6 +83,11 @@ int main(int argc, char *argv[]) {
         if (commandType == UNKNOWN) {
             printf("Unknown command\n");
             continue;
+        }
+        if (commandType == UPLOAD || commandType == DOWNLOAD) {
+            createUniqueFileTransferFifoName(fileTransferFifoName, getpid());
+            strcat(commandArgPart, " ");
+            strcat(commandArgPart, fileTransferFifoName);
         }
         request.clientPid = getpid();
         request.commandType = commandType;
