@@ -30,6 +30,9 @@ void handleCommand(struct Request request, int responseFifoFd, const char* serve
         case UPLOAD:
             handleUploadCommand(request, responseFifoFd, serverDir);
             break;
+        case DOWNLOAD:
+            handleDownloadCommand(request, responseFifoFd, serverDir);
+            break;
         default:
             response.status = ERROR;
             strcpy(response.payload, "Unknown command\n");
@@ -304,6 +307,45 @@ void handleUploadCommand(struct Request request, int responseFifoFd, const char*
     }
 }
 
+void handleDownloadCommand(struct Request request, int responseFifoFd, const char* serverDir) {
+    struct Response response;
+    memset(response.payload, 0, MAX_PAYLOAD_SIZE);
+    response.status = OK;
+    char* filename = strtok(request.commandArgs, " ");
+    if (filename == NULL) {
+        sendErrorResponse(responseFifoFd, "Argument for filename is invalid\n");
+        return;
+    }
+    // If file does not exist in the server directory
+    if (!isFileExists(serverDir, filename)) {
+        sendErrorResponse(responseFifoFd, "File does not exist on the server\n");
+        return;
+    }
+    char* fileTransferFifoName = strtok(NULL, " ");
+    if (fileTransferFifoName == NULL) {
+        sendErrorResponse(responseFifoFd, "An error occured while establishing download fifo\n");
+        return;
+    }
+    if (mkfifo(fileTransferFifoName, 0666) == -1) {
+        errExit("mkfifo fileTransferFifo");
+    }
+    strcpy(response.payload, filename);
+    strcat(response.payload, " ");
+    strcat(response.payload, fileTransferFifoName);
+    writeResponseToFifo(responseFifoFd, response);
+
+    char filepath[MAX_FILENAME_SIZE];
+    sprintf(filepath, "%s/%s", serverDir, filename);
+    int bytesTransferred = transferFile(filepath, fileTransferFifoName);
+    if (bytesTransferred == -1) {
+        sendErrorResponse(responseFifoFd, "An error occured while transferring file\n");
+        return;
+    }
+    if (unlink(fileTransferFifoName) == -1) {
+        errExit("unlink fileTransferFifo");
+    }
+}
+
 // ********************** Response Part **********************
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response) {
@@ -322,6 +364,9 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
             break;
         case UPLOAD:
             handleUploadResponse(response);
+            break;
+        case DOWNLOAD:
+            handleDownlaodResponse(response);
             break;
         default:
             fprintf(stderr, "Invalid command type\n");
@@ -370,5 +415,22 @@ void handleUploadResponse(struct Response response) {
     }
     else {
         printf("%d bytes transferred\n", bytesTransferred);
+    }
+}
+
+void handleDownlaodResponse(struct Response response) {
+    // Payload is fileTransferFifoName
+    char fileTransferFifoName[MAX_FILENAME_SIZE];
+    char filename[MAX_FILENAME_SIZE];
+    strcpy(filename, strtok(response.payload, " "));
+    strcpy(fileTransferFifoName, strtok(NULL, ""));
+    printf("File download request received\n");
+    printf("Begining file transfer\n");
+    int bytesReceived = receiveFile(filename, fileTransferFifoName);
+    if (bytesReceived == -1) {
+        fprintf(stderr, "An error occured while receiving file\n");
+    }
+    else {
+        printf("%d bytes transferred\n", bytesReceived);
     }
 }

@@ -244,7 +244,7 @@ int receiveFile(const char* filepath, const char* fileTransferFifoName) {
     // If transfer was cancelled, delete the file
     if (totalBytesRead == 0) {
         if (unlink(filepath) == -1) {
-            errExit("unlink");
+            errExit("unlink for cancelled transfer");
         }
     }
 
