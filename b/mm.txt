@@ -1,3 +1,4 @@
+Buda bir bir bir
 Yeni birinci satir
 Birinci satir
 Ucuncuydu eskiden
@@ -7,3 +8,4 @@ Dorduncu satir
 Bu en sona eklenecek string
 Tekrar en sona ekleme yapalim o zaman
 teksatir
+Buraya bak lan

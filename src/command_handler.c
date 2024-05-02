@@ -193,8 +193,10 @@ void handleWriteTCommand(struct Request request, int responseFifoFd, const char*
     // Check if the file exists
     int fd = -1;
     if (!isFileExists(serverDir, filename)) {
-        // Create the file
-        NO_EINTR(fd = open(filename, O_CREAT | O_WRONLY, 0666));
+        // Create the file in the directory
+        char filePath[MAX_FILENAME_SIZE];
+        sprintf(filePath, "%s/%s", serverDir, filename);
+        NO_EINTR(fd = open(filePath, O_CREAT | O_WRONLY, 0666));
         if (fd == -1) {
             perror("open");
             exit(EXIT_FAILURE);

@@ -178,7 +178,7 @@ char* readWholeFile(const char* dirName, const char* filename) {
 
 // If lineNum -1 then append the line at the end for the file
 void writeLineToFile(const char* dirName, const char* filename, const char* lineToInsert, int lineNum) {
-    char* tempFilename = "tempfile";
+    char* tempFilename = "tmpX8yQ";
     char filePath[MAX_FILENAME_SIZE];
     char tempFilePath[MAX_FILENAME_SIZE];
     sprintf(filePath, "%s/%s", dirName, filename);
@@ -186,6 +186,7 @@ void writeLineToFile(const char* dirName, const char* filename, const char* line
     FILE* file = fopen(filePath, "r");
     FILE* tempFile = fopen(tempFilePath, "w");
     if (file == NULL || tempFile == NULL) {
+        perror("writeLineToFile fopen");
         return;
     }
 

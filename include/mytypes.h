@@ -2,11 +2,12 @@
 #define MYTYPES_H
 
 #include <unistd.h>
+#include <semaphore.h>
 
 #define MAX_ARG_SIZE 256
 #define MAX_PAYLOAD_SIZE 1024
-#define MAX_FILENAME_SIZE 256
-#define MAX_SEMAPHORE_NAME_SIZE 512
+#define MAX_FILENAME_SIZE 255
+#define MAX_SEMAPHORE_NAME_SIZE 255
 #define MAX_FILECOUNT 1024
 
 enum CommandType {
