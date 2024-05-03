@@ -98,6 +98,7 @@ int main(int argc, char *argv[]) {
                     handleConnectCommand(request, &serverQueue, serverArg.dirname);
                     break;
                 case TRYCONNECT:
+                    handleTryConnectCommand(request, &serverQueue, serverArg.dirname, availableChildCount);
                     break;
                 case KILL:
                     connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);

@@ -55,20 +55,29 @@ int main(int argc, char *argv[]) {
     request.commandType = connectionType;
     strcpy(request.commandArgs, responseFifoName);
 
+    createFifoIfNotExist(responseFifoName);
+
     // Send the connection request    
     writeRequestToFifo(requestFifoFd, request);
 
-    createFifoIfNotExist(responseFifoName);
     int responseFifoFd = open(responseFifoName, O_RDONLY, 0666);
     if (responseFifoFd == -1) {
         errExit("open response fifo");
     }
+
     // Wait for server to send connection acceptance response
     printf("Waiting for Que...\n");
     struct Response response;
     readResponseFromFifo(responseFifoFd, &response);
     if (response.status == ERROR) {
-        printf("Connection Rejected\n");
+        printf("Connection Rejected. Queue is Full\n");
+        if (close(requestFifoFd) == -1) {
+            errExit("close request fifo");
+        }
+        if (close(responseFifoFd) == -1) {
+            errExit("close response fifo");
+        }
+        unlink(responseFifoName);
         return 1;
     }
     printf("Connection Established\n");

@@ -6,7 +6,7 @@
 
 void handleCommand(struct Request request, int responseFifoFd, const char* serverDir);
 void handleConnectCommand(struct Request request, struct Queue *serverQueue, const char* serverDir);
-void handleTryConnectCommand(struct Request request);
+void handleTryConnectCommand(struct Request request, struct Queue *serverQueue, const char* serverDir, int availableChildCount);
 void handleHelpCommand(struct Request request, int responseFifoFd);
 void handleListCommand(struct Request request, int responseFifoFd, const char* serverDir);
 void handleReadFCommand(struct Request request, int responseFifoFd, const char* serverDir);

@@ -61,20 +61,25 @@ void handleConnectCommand(struct Request request, struct Queue *serverQueue, con
     }
 }
 
-void handleTryConnectCommand(struct Request request) {
-    int responseFifoFd = 0;
-    while((responseFifoFd = open(request.commandArgs, O_WRONLY, 0666)) == -1 && errno == ENOENT);
-    if (responseFifoFd == -1) {
-        errExit("open response for connect");
+void handleTryConnectCommand(struct Request request, struct Queue *serverQueue, const char* serverDir, int availableChildCount) {
+    // Check if there is any available child and serverQueue is empty
+    if (availableChildCount == 0) {
+        // Reject the connection request
+        struct Response response;
+        response.status = ERROR;
+        strcpy(response.payload, "Server Que Full\n");
+        int responseFifoFd = 0;
+        NO_EINTR(responseFifoFd = open(request.commandArgs, O_WRONLY, 0666));
+        if (responseFifoFd == -1) {
+            errExit("open response fifo");
+        }
+        writeResponseToFifo(responseFifoFd, response);
+        if (close(responseFifoFd) == -1) {
+            errExit("close responseFifoFd");
+        }
+        return;
     }
-    struct Response connectionResponse;
-    connectionResponse.status = ERROR;
-    writeResponseToFifo(responseFifoFd, connectionResponse);
-    if(close(responseFifoFd) == -1) {
-        errExit("close response fifo");
-    }
-    // Later remove this
-    printf("Client PID %d connected\n", request.clientPid);
+    handleConnectCommand(request, serverQueue, serverDir);
 }
 
 void handleHelpCommand(struct Request request, int responseFifoFd) {
