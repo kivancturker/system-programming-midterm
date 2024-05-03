@@ -68,14 +68,14 @@ int isFileExists(const char* dirName, const char* filename) {
     int numOfFiles = getNumOfFilesInDir(dirName);
     char* filenames[numOfFiles];
     getAllTheFilenamesInDir(dirName, filenames, numOfFiles);
+    int fileExists = 0;
     for (int i = 0; i < numOfFiles; i++) {
         if (strcmp(filenames[i], filename) == 0) {
-            free(filenames[i]);
-            return 1;
+            fileExists = 1;
         }
         free(filenames[i]);
     }
-    return 0;
+    return fileExists;
 }
 
 void createSemaphores(const char* dirName) {
