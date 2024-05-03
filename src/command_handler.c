@@ -394,6 +394,29 @@ void handleArchServerCommand(struct Request request, int responseFifoFd, const c
     if (mkfifo(fileTransferFifoName, 0666) == -1) {
         errExit("mkfifo fileTransferFifo");
     }
+    // Critical Section - Wait all the file semaphores
+    // Get all filenames 
+    // open semaphore for each of them
+    int numOfFiles = getNumOfFilesInDir(serverDir);
+    char* filenames[numOfFiles];
+    sem_t *semaphores[numOfFiles];
+    // Do not forget to free filenames !!!
+    getAllTheFilenamesInDir(serverDir, filenames, numOfFiles);
+    // Open all the semaphores
+    for (int i = 0; i < numOfFiles; i++) {
+        char semaphoreName[MAX_SEMAPHORE_NAME_SIZE];
+        getSemaphoreNameByFilename(filenames[i], getppid(), semaphoreName);
+        semaphores[i] = sem_open(semaphoreName, O_CREAT, 0666, 1);
+        if (semaphores[i] == SEM_FAILED) {
+            perror("sem_open");
+            exit(EXIT_FAILURE);
+        }
+    }
+    // Wait for all the semaphores
+    for (int i = 0; i < numOfFiles; i++) {
+        sem_wait(semaphores[i]);
+    }
+
     char tarCommand[MAX_PAYLOAD_SIZE];
     sprintf(tarCommand, "tar -cf %s/%s %s/*", serverDir, tarname, serverDir);
     // Now fork exec to run that tar command not system because system is not async safe
@@ -430,6 +453,15 @@ void handleArchServerCommand(struct Request request, int responseFifoFd, const c
         sendErrorResponse(responseFifoFd, "An error occured while transferring tar file\n");
         return;
     }
+
+    for (int i = 0; i < numOfFiles; i++) {
+        sem_post(semaphores[i]);
+        sem_close(semaphores[i]);
+    }
+    for (int i = 0; i < numOfFiles; i++) {
+        free(filenames[i]);
+    }
+
     // Remove archieve from server directory
     unlink(tarPath);
     
