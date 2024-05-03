@@ -25,10 +25,10 @@ void childMain(struct ConnectionRequest connectionRequest, int pipeFd) {
     while(1) {
         struct Request request;
         readForwardedRequestFromServer(pipeFd, &request);
-        if (request.commandType == QUIT) {
+        handleCommand(request, responseFifoFd, serverDir);
+        if (request.commandType == QUIT || request.commandType == KILL) {
             break;
         }
-        handleCommand(request, responseFifoFd, serverDir);
     }
 
     if (close(pipeFd) == -1) {

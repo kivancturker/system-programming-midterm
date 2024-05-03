@@ -161,6 +161,7 @@ int main(int argc, char *argv[]) {
     if (close(requestFifoFd) == -1) {
         errExit("close request fifo");
     }
+    unlink(REQUEST_FIFO_NAME);
 
     destroyAllSemaphores(serverArg.dirname);
     

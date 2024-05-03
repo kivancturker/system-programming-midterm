@@ -33,6 +33,11 @@ void handleCommand(struct Request request, int responseFifoFd, const char* serve
         case DOWNLOAD:
             handleDownloadCommand(request, responseFifoFd, serverDir);
             break;
+        case QUIT:
+            handleQuitCommand(request, responseFifoFd, serverDir);
+            break;
+        case KILL:
+            break;
         default:
             response.status = ERROR;
             strcpy(response.payload, "Unknown command\n");
@@ -332,6 +337,16 @@ void handleDownloadCommand(struct Request request, int responseFifoFd, const cha
     if (mkfifo(fileTransferFifoName, 0666) == -1) {
         errExit("mkfifo fileTransferFifo");
     }
+    // Open semaphore
+    char semaphoreName[MAX_SEMAPHORE_NAME_SIZE];
+    getSemaphoreNameByFilename(filename, getppid(), semaphoreName);
+    sem_t* semaphore = sem_open(semaphoreName, O_CREAT, 0666, 1);
+    if (semaphore == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+    sem_wait(semaphore);
+
     strcpy(response.payload, filename);
     strcat(response.payload, " ");
     strcat(response.payload, fileTransferFifoName);
@@ -347,6 +362,14 @@ void handleDownloadCommand(struct Request request, int responseFifoFd, const cha
     if (unlink(fileTransferFifoName) == -1) {
         errExit("unlink fileTransferFifo");
     }
+    sem_post(semaphore);
+}
+
+void handleQuitCommand(struct Request request, int responseFifoFd, const char* serverDir) {
+    struct Response response;
+    response.status = OK;
+    strcpy(response.payload, "Log file write request granted\nbye...\n");
+    writeResponseToFifo(responseFifoFd, response);
 }
 
 // ********************** Response Part **********************
@@ -370,6 +393,11 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
             break;
         case DOWNLOAD:
             handleDownlaodResponse(response);
+            break;
+        case QUIT:
+            handleQuitResponse(response);
+            break;
+        case KILL:
             break;
         default:
             fprintf(stderr, "Invalid command type\n");
@@ -436,4 +464,8 @@ void handleDownlaodResponse(struct Response response) {
     else {
         printf("%d bytes transferred\n", bytesReceived);
     }
+}
+
+void handleQuitResponse(struct Response response) {
+    printf("%s\n", response.payload);
 }

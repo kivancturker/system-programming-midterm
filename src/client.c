@@ -107,7 +107,19 @@ int main(int argc, char *argv[]) {
         else {
             handleErrorResponse(response);
         }
+        if (commandType == QUIT) {
+            break;
+        }
     }
+
+    if (close(requestFifoFd) == -1) {
+        errExit("close request fifo");
+    }
+    
+    if (close(responseFifoFd) == -1) {
+        errExit("close response fifo");
+    }
+    unlink(responseFifoName);
 
     return 0;
 }
