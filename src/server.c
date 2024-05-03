@@ -56,8 +56,10 @@ int main(int argc, char *argv[]) {
     printf("Waiting for clients...\n");
 
     // Create request fifo
-    createFifoIfNotExist(REQUEST_FIFO_NAME);
-    int requestFifoFd = open(REQUEST_FIFO_NAME, O_RDWR, 0666);
+    char requestFifoName[255];
+    createUniqueRequestFifoName(requestFifoName, getpid());
+    createFifoIfNotExist(requestFifoName);
+    int requestFifoFd = open(requestFifoName, O_RDWR, 0666);
     if (requestFifoFd == -1) {
         errExit("open request fifo");
     }
@@ -161,7 +163,7 @@ int main(int argc, char *argv[]) {
     if (close(requestFifoFd) == -1) {
         errExit("close request fifo");
     }
-    unlink(REQUEST_FIFO_NAME);
+    unlink(requestFifoName);
 
     destroyAllSemaphores(serverArg.dirname);
     

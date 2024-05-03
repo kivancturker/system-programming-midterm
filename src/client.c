@@ -21,6 +21,12 @@ int main(int argc, char *argv[]) {
     parseClientArgs(argc, argv, &clientArg);
     enum CommandType connectionType = getConnectionType(clientArg.connectionType); // Later put this on the request
     
+    // Check if process exist with given pid
+    int isProcessExist = kill(clientArg.serverPid, 0) == 0;
+    if (!isProcessExist) {
+        fprintf(stderr, "Server with pid %d does not exist\n", clientArg.serverPid);
+        return 1;
+    }
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &sigintHandler;
@@ -32,7 +38,13 @@ int main(int argc, char *argv[]) {
     createUniqueResponseFifoName(responseFifoName, getpid());
 
      // Establish by creating fifo
-    int requestFifoFd = open(REQUEST_FIFO_NAME, O_WRONLY, 0666);
+    char requestFifoName[255];
+    createUniqueRequestFifoName(requestFifoName, clientArg.serverPid);
+    int requestFifoFd = open(requestFifoName, O_WRONLY, 0666);
+    if (requestFifoFd == -1 && errno == ENOENT) {
+        fprintf(stderr, "Server with pid %d does not exist\n", clientArg.serverPid);
+        return 1;
+    }
     if (requestFifoFd == -1) {
         errExit("open requets fifo");
     }

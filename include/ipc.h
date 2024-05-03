@@ -5,10 +5,11 @@
 #include "mytypes.h"
 
 
-#define REQUEST_FIFO_NAME "/tmp/request_fifo943953"
+#define REQUEST_FIFO_TEMPLATE "/tmp/request_fifo943953"
 #define RESPONSE_FIFO_TEMPLATE "/tmp/response_fifo" // Use template to create unique fifo name
 #define FILETRANSFER_FIFO_TEMPLATE "/tmp/transfer_fifo" // Use template to create unique fifo name
 
+void createUniqueRequestFifoName(char *requestFifoName, int clientPid);
 void createUniqueResponseFifoName(char *responseFifoName, int clientPid);
 void createUniqueFileTransferFifoName(char *fileTransferFifoName, int clientPid);
 int readRequestFromFifo(int fifoFd, struct Request* request);

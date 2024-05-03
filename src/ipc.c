@@ -9,6 +9,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+void createUniqueRequestFifoName(char *requestFifoName, int clientPid) {
+    sprintf(requestFifoName, REQUEST_FIFO_TEMPLATE "%d", clientPid);
+}
+
 void createUniqueResponseFifoName(char *responseFifoName, int clientPid) {
     sprintf(responseFifoName, RESPONSE_FIFO_TEMPLATE "%d", clientPid);
 }
