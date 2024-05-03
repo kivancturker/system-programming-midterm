@@ -36,6 +36,9 @@ void handleCommand(struct Request request, int responseFifoFd, const char* serve
         case QUIT:
             handleQuitCommand(request, responseFifoFd, serverDir);
             break;
+        case ARCHSERVER:
+            handleArchServerCommand(request, responseFifoFd, serverDir);
+            break;
         case KILL:
             break;
         default:
@@ -372,6 +375,69 @@ void handleQuitCommand(struct Request request, int responseFifoFd, const char* s
     writeResponseToFifo(responseFifoFd, response);
 }
 
+void handleArchServerCommand(struct Request request, int responseFifoFd, const char* serverDir) {
+    struct Response response;
+    response.status = OK;
+    memset(response.payload, 0, MAX_PAYLOAD_SIZE);
+    // Take the arguement from commandArgs filename.tar
+    // Then fork exec, to run tar to archive all the files in the server directory
+    char* tarname = strtok(request.commandArgs, " ");
+    if (tarname == NULL) {
+        sendErrorResponse(responseFifoFd, "Argument for filename is invalid\n");
+        return;
+    }
+    char* fileTransferFifoName = strtok(NULL, "");
+    if (fileTransferFifoName == NULL) {
+        sendErrorResponse(responseFifoFd, "An error occured while establishing archive fifo\n");
+        return;
+    }
+    if (mkfifo(fileTransferFifoName, 0666) == -1) {
+        errExit("mkfifo fileTransferFifo");
+    }
+    char tarCommand[MAX_PAYLOAD_SIZE];
+    sprintf(tarCommand, "tar -cf %s/%s %s/*", serverDir, tarname, serverDir);
+    // Now fork exec to run that tar command not system because system is not async safe
+    pid_t pid = fork();
+    if (pid == -1) {
+        errExit("fork");
+    }
+    if (pid == 0) {
+        execl("/bin/sh", "sh", "-c", tarCommand, (char*) NULL);
+        errExit("execl");
+    }
+    // Wait for the child to finish
+    int status = 0;
+    int waitResult = 0;
+    while ((waitResult = waitpid(pid, &status, 0)) == -1 && errno == EINTR);
+    if (waitResult == -1) {
+        errExit("waitpid");
+    }
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        strcpy(response.payload, tarname);
+        strcat(response.payload, " ");
+        strcat(response.payload, fileTransferFifoName);
+        writeResponseToFifo(responseFifoFd, response);
+    }
+    else {
+        sendErrorResponse(responseFifoFd, "An error occured while creating archive\n");
+    }
+
+    // Transfer the archieve file to the client working directory
+    char tarPath[MAX_ARG_SIZE];
+    snprintf(tarPath, MAX_ARG_SIZE, "%s/%s", serverDir, tarname);
+    int bytesTransferred = transferFile(tarPath, fileTransferFifoName);
+    if (bytesTransferred == -1) {
+        sendErrorResponse(responseFifoFd, "An error occured while transferring tar file\n");
+        return;
+    }
+    // Remove archieve from server directory
+    unlink(tarPath);
+    
+    if (unlink(fileTransferFifoName) == -1) {
+        errExit("unlink fileTransferFifo");
+    }
+}
+
 // ********************** Response Part **********************
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response) {
@@ -396,6 +462,9 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
             break;
         case QUIT:
             handleQuitResponse(response);
+            break;
+        case ARCHSERVER:
+            handleArchServerResponse(response);
             break;
         case KILL:
             break;
@@ -468,4 +537,32 @@ void handleDownlaodResponse(struct Response response) {
 
 void handleQuitResponse(struct Response response) {
     printf("%s\n", response.payload);
+}
+
+void handleArchServerResponse(struct Response response) {
+    // Parse response
+    char tarname[MAX_FILENAME_SIZE];
+    char fileTransferFifoName[MAX_FILENAME_SIZE];
+    char* token = strtok(response.payload, " ");
+    if (token == NULL) {
+        fprintf(stderr, "An error occured while parsing archive response\n");
+        return;
+    }
+    strcpy(tarname, token);
+    token = strtok(NULL, "");
+    if (token == NULL) {
+        fprintf(stderr, "An error occured while parsing archive response\n");
+        return;
+    }
+    strcpy(fileTransferFifoName, token);
+    printf("Archive request received\n");
+    printf("Begining file transfer\n");
+    int bytesReceived = receiveFile(tarname, fileTransferFifoName);
+    if (bytesReceived == -1) {
+        fprintf(stderr, "An error occured while receiving archive\n");
+    }
+    else {
+        printf("%d bytes transferred\n", bytesReceived);
+        printf("Archieve removed from server directory\n");
+    }
 }

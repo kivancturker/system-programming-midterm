@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
             printf("Unknown command\n");
             continue;
         }
-        if (commandType == UPLOAD || commandType == DOWNLOAD) {
+        if (commandType == UPLOAD || commandType == DOWNLOAD || commandType == ARCHSERVER) {
             createUniqueFileTransferFifoName(fileTransferFifoName, getpid());
             strcat(commandArgPart, " ");
             strcat(commandArgPart, fileTransferFifoName);
