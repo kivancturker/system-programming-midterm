@@ -70,8 +70,10 @@ int isFileExists(const char* dirName, const char* filename) {
     getAllTheFilenamesInDir(dirName, filenames, numOfFiles);
     for (int i = 0; i < numOfFiles; i++) {
         if (strcmp(filenames[i], filename) == 0) {
+            free(filenames[i]);
             return 1;
         }
+        free(filenames[i]);
     }
     return 0;
 }
@@ -90,6 +92,7 @@ void createSemaphores(const char* dirName) {
             exit(EXIT_FAILURE);
         }
         sem_close(semaphore);
+        free(filenames[i]);
     }
 }
 
@@ -113,6 +116,7 @@ void destroyAllSemaphores(const char* dirName) {
         char semaphoreName[MAX_SEMAPHORE_NAME_SIZE];
         getSemaphoreNameByFilename(filenames[i], getpid(), semaphoreName);
         sem_unlink(semaphoreName);
+        free(filenames[i]);
     }
 }
 
@@ -235,10 +239,7 @@ void writeLineToFile(const char* dirName, const char* filename, const char* line
     if (lineNum == -1 && !appended) {
         // If the previous line doesn't have a newline character, add one
         prevLine = readLineFromFile(dirName, filename, currentLine - 1);
-        if (prevLine == NULL) {
-            fprintf(stderr, "writeLineToFile readLineFromFile");
-        }
-        else {
+        if (prevLine != NULL) {
             if (prevLine[strlen(prevLine) - 1] != '\n') {
                 fprintf(tempFile, "\n");
             }

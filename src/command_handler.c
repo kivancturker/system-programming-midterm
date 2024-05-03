@@ -129,6 +129,9 @@ void handleListCommand(struct Request request, int responseFifoFd, const char* s
         strcat(response.payload, "\n");
     }
     writeResponseToFifo(responseFifoFd, response);
+    for (int i = 0; i < numOfFiles; i++) {
+        free(filenames[i]);
+    }
 }
 
 void handleReadFCommand(struct Request request, int responseFifoFd, const char* serverDir) {
