@@ -7,6 +7,7 @@
         "myutil.h": "c",
         "child.h": "c",
         "mytypes.h": "c",
-        "fileops.h": "c"
+        "fileops.h": "c",
+        "logger.h": "c"
     }
 }

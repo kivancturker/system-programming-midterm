@@ -14,6 +14,7 @@
 #include "queue.h"
 #include "child.h"
 #include "fileops.h"
+#include "logger.h"
 
 sig_atomic_t sigIntrCount = 0;
 sig_atomic_t sigChildCount = 0;
@@ -31,6 +32,8 @@ int main(int argc, char *argv[]) {
     parseServerArgs(argc, argv, &serverArg);
 
     createDirIfNotExist(serverArg.dirname);
+
+    createLogFile();
 
     // Set handler for sigchild
     struct sigaction sa;
@@ -58,6 +61,11 @@ int main(int argc, char *argv[]) {
     if (requestFifoFd == -1) {
         errExit("open request fifo");
     }
+
+    char starterLogMessage[255];
+    snprintf(starterLogMessage, 255, "Server Started PID: %d\n", getpid());
+    writeLog(starterLogMessage);
+    writeLog("Waiting for clients...\n");
 
     struct Request request;
     int isRequestReadInterrupted = 0;
@@ -90,6 +98,11 @@ int main(int argc, char *argv[]) {
                 case TRYCONNECT:
                     break;
                 case KILL:
+                    connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);
+                    char killLogMessage[255];
+                    snprintf(killLogMessage, 255, "kill signal from client%d.. terminating...\n", connectionInfoIndex);
+                    printf("%s", killLogMessage);
+                    writeLog(killLogMessage);
                     break;
                 default:
                     connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);
@@ -100,7 +113,12 @@ int main(int argc, char *argv[]) {
         }
         while ((waitedPid = waitpid(-1, NULL, WNOHANG)) > 0) {
             int connectionIndexOfWaitedClient = findConnectionIndexByChildPid(connectionInfos, serverArg.numOfClients, waitedPid);
-            printf("Client PID %d and it was client%d disconnected\n", waitedPid, connectionIndexOfWaitedClient);
+            if (request.commandType != KILL) {
+                char quitLogMessage[255];
+                snprintf(quitLogMessage, 255, "client%d disconnected...\n", connectionIndexOfWaitedClient);
+                printf("%s", quitLogMessage);
+                writeLog(quitLogMessage);
+            }
             removeConnection(connectionInfos, serverArg.numOfClients, connectionIndexOfWaitedClient);
             availableChildCount++;
             sigChildCount--;
@@ -132,6 +150,9 @@ int main(int argc, char *argv[]) {
             if (close(connectionInfos->pipeFds[READ_END_PIPE]) == -1) {
                 errExit("close pipeFds[0]");
             }
+            char connectionLogMessage[255];
+            snprintf(connectionLogMessage, 255, "Client PID %d, connected as \"client%d\"\n", connectionRequest.clientPid, availableConnectionIndex);
+            writeLog(connectionLogMessage);
             connectionInfos[availableConnectionIndex].childPid = childPid;
             availableChildCount--;
         }
@@ -142,7 +163,9 @@ int main(int argc, char *argv[]) {
     }
 
     destroyAllSemaphores(serverArg.dirname);
-
+    
+    printf("bye\n");
+    writeLog("bye\n");
     return 0;
 }
 
