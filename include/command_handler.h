@@ -16,6 +16,7 @@ void handleUploadCommand(struct Request request, int responseFifoFd, const char*
 void handleDownloadCommand(struct Request request, int responseFifoFd, const char* serverDir);
 void handleQuitCommand(struct Request request, int responseFifoFd, const char* serverDir);
 void handleArchServerCommand(struct Request request, int responseFifoFd, const char* serverDir);
+void handleKillServerCommand(struct Request request, struct ConnectionInfo* connectionInfos, int numOfClients);
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response);
 void handleErrorResponse(struct Response response);
@@ -27,5 +28,6 @@ void handleUploadResponse(struct Response response);
 void handleDownlaodResponse(struct Response response);
 void handleQuitResponse(struct Response response);
 void handleArchServerResponse(struct Response response);
+void handleKillServerResponse(struct Response response);
 
 #endif // COMMAND_HANDLER_H

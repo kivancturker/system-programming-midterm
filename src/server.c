@@ -84,7 +84,8 @@ int main(int argc, char *argv[]) {
     int childPipeWriteEndFd = -1;
     int isClientConnected = 0;
     int waitedPid = -1;
-    while(1) {
+    int keepServerRunning = 1;
+    while(keepServerRunning) {
         if (sigIntrCount > 0) {
             break;
         }
@@ -101,12 +102,9 @@ int main(int argc, char *argv[]) {
                     handleTryConnectCommand(request, &serverQueue, serverArg.dirname, availableChildCount);
                     break;
                 case KILL:
-                    connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);
-                    char killLogMessage[255];
-                    snprintf(killLogMessage, 255, "kill signal from client%d.. terminating...\n", connectionInfoIndex);
-                    printf("%s", killLogMessage);
-                    writeLog(killLogMessage);
-                    break;
+                    handleKillServerCommand(request, connectionInfos, serverArg.numOfClients);
+                    keepServerRunning = 0;
+                    continue;
                 default:
                     connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, serverArg.numOfClients, request.clientPid);
                     childPipeWriteEndFd = connectionInfos[connectionInfoIndex].pipeFds[WRITE_END_PIPE];
@@ -159,6 +157,29 @@ int main(int argc, char *argv[]) {
             connectionInfos[availableConnectionIndex].childPid = childPid;
             availableChildCount--;
         }
+    }
+
+    // Forward kill request to all children
+    struct Request killRequest;
+    killRequest.commandType = KILL;
+    memset(killRequest.commandArgs, 0, MAX_ARG_SIZE);
+    for (int i = 0; i < serverArg.numOfClients && request.commandType != KILL; i++) {
+        if (connectionInfos[i].childPid != -1) {
+            forwardRequestToChild(connectionInfos[i].pipeFds[WRITE_END_PIPE], killRequest);
+        }
+    }
+    // Wait all the remaining children
+    while ((waitedPid = waitpid(-1, NULL, 0)) > 0) {
+        int connectionIndexOfWaitedClient = findConnectionIndexByChildPid(connectionInfos, serverArg.numOfClients, waitedPid);
+        if (request.commandType != KILL) {
+            char interruptLogMessage[255];
+            snprintf(interruptLogMessage, 255, "client%d disconnected...\n", connectionIndexOfWaitedClient);
+            printf("%s", interruptLogMessage);
+            writeLog(interruptLogMessage);
+        }
+        removeConnection(connectionInfos, serverArg.numOfClients, connectionIndexOfWaitedClient);
+        availableChildCount++;
+        sigChildCount--;
     }
 
     if (close(requestFifoFd) == -1) {

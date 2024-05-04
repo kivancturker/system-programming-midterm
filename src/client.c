@@ -11,9 +11,14 @@
 #include "mytypes.h"
 
 sig_atomic_t sigIntrCount = 0;
+sig_atomic_t sigTermCount = 0;
 
 void sigintHandler(int signal) {
     sigIntrCount++;
+}
+
+void sigtermHandler(int signal) {
+    sigTermCount++;
 }
 
 int main(int argc, char *argv[]) {
@@ -31,6 +36,12 @@ int main(int argc, char *argv[]) {
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &sigintHandler;
     if (sigaction(SIGINT, &sa, NULL) == -1) {
+        errExit("sigaction");
+    }
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = &sigtermHandler;
+    if (sigaction(SIGTERM, &sa, NULL) == -1) {
         errExit("sigaction");
     }
 
@@ -88,6 +99,10 @@ int main(int argc, char *argv[]) {
     while(1) {
         printf("\nEnter command: ");
         fgets(command, 255, stdin);
+        if (sigTermCount > 0) {
+            printf("Exiting...\n");
+            break;
+        }
         if (sigIntrCount > 0) {
             printf("Exiting...\n");
             request.clientPid = getpid();
@@ -128,7 +143,7 @@ int main(int argc, char *argv[]) {
         else {
             handleErrorResponse(response);
         }
-        if (commandType == QUIT) {
+        if (commandType == QUIT || commandType == KILL) {
             break;
         }
     }

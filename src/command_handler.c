@@ -1,6 +1,7 @@
 #include "command_handler.h"
 #include "ipc.h"
 #include "fileops.h"
+#include "logger.h"
 
 #include <fcntl.h>
 #include <errno.h>
@@ -77,6 +78,10 @@ void handleTryConnectCommand(struct Request request, struct Queue *serverQueue, 
         if (close(responseFifoFd) == -1) {
             errExit("close responseFifoFd");
         }
+        char connectionRejectMessage[255];
+        sprintf(connectionRejectMessage, "Connection Request PID %d... Queue FULL\n", request.clientPid);
+        writeLog(connectionRejectMessage);
+        printf("%s", connectionRejectMessage);
         return;
     }
     handleConnectCommand(request, serverQueue, serverDir);
@@ -475,6 +480,31 @@ void handleArchServerCommand(struct Request request, int responseFifoFd, const c
     }
 }
 
+void handleKillServerCommand(struct Request request, struct ConnectionInfo* connectionInfos, int numOfClients) {
+    int connectionInfoIndex = findConnectionIndexByClientPid(connectionInfos, numOfClients, request.clientPid);
+    char killLogMessage[255];
+    snprintf(killLogMessage, 255, "kill signal from client%d.. terminating...\n", connectionInfoIndex);
+    printf("%s", killLogMessage);
+    writeLog(killLogMessage);
+
+    // Forward kill request to all the childs
+    struct Request killRequest;
+    killRequest.commandType = KILL;
+    memset(killRequest.commandArgs, 0, MAX_ARG_SIZE);
+    for (int i = 0; i < numOfClients; i++) {
+        if (connectionInfos[i].childPid != -1) {
+            if (connectionInfos[i].clientPid == request.clientPid) {
+                strcpy(killRequest.commandArgs, "sendresponse");
+                forwardRequestToChild(connectionInfos[i].pipeFds[WRITE_END_PIPE], killRequest);
+                strcpy(killRequest.commandArgs, "");
+            }
+            else {
+                forwardRequestToChild(connectionInfos[i].pipeFds[WRITE_END_PIPE], killRequest);
+            }
+        }
+    }
+}
+
 // ********************** Response Part **********************
 
 void handleCommandResponseByCommandType(enum CommandType commandType, struct Response response) {
@@ -504,6 +534,7 @@ void handleCommandResponseByCommandType(enum CommandType commandType, struct Res
             handleArchServerResponse(response);
             break;
         case KILL:
+            handleKillServerResponse(response);
             break;
         default:
             fprintf(stderr, "Invalid command type\n");
@@ -602,4 +633,8 @@ void handleArchServerResponse(struct Response response) {
         printf("%d bytes transferred\n", bytesReceived);
         printf("Archieve removed from server directory\n");
     }
+}
+
+void handleKillServerResponse(struct Response response) {
+    printf("%s\n", response.payload);
 }
